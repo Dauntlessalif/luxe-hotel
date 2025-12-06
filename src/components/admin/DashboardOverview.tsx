@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
+import { bookingsApi } from '@/lib/api';
 import { 
   Users, 
   DoorOpen, 
@@ -18,47 +18,22 @@ const DashboardOverview = () => {
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
-      const [bookings, guests, rooms, messages, petCare, reviews] = await Promise.all([
-        supabase.from('bookings').select('*', { count: 'exact' }),
-        supabase.from('guests').select('*', { count: 'exact' }),
-        supabase.from('rooms').select('*'),
-        supabase.from('contact_messages').select('*', { count: 'exact' }),
-        supabase.from('pet_care_requests').select('*', { count: 'exact' }),
-        supabase.from('reviews').select('*'),
-      ]);
-
-      // Calculate revenue
-      const totalRevenue = bookings.data?.reduce((sum, booking: any) => {
-        return sum + Number(booking.total_price || 0);
-      }, 0) || 0;
-
-      // Calculate active bookings
-      const activeBookings = bookings.data?.filter(
-        (b: any) => b.status !== 'cancelled' && b.status !== 'checked_out'
-      ).length || 0;
-
-      // Calculate pending messages
-      const pendingMessages = messages.data?.filter(
-        (m: any) => m.status === 'new'
-      ).length || 0;
-
-      // Calculate average rating
-      const avgRating = reviews.data?.length
-        ? reviews.data.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.data.length
-        : 0;
-
+      const response = await fetch('/api/dashboard/stats');
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      const statsData = await response.json();
+      
       return {
-        totalBookings: bookings.count || 0,
-        activeBookings,
-        totalGuests: guests.count || 0,
-        totalRooms: rooms.data?.length || 0,
-        availableRooms: rooms.data?.filter((r: any) => r.available).length || 0,
-        totalRevenue,
-        totalMessages: messages.count || 0,
-        pendingMessages,
-        totalPetCare: petCare.count || 0,
-        totalReviews: reviews.data?.length || 0,
-        averageRating: avgRating,
+        totalBookings: statsData.totalBookings || 0,
+        activeBookings: statsData.activeBookings || 0,
+        totalGuests: statsData.totalGuests || 0,
+        totalRooms: statsData.totalRooms || 0,
+        availableRooms: statsData.availableRooms || 0,
+        totalRevenue: statsData.totalRevenue || 0,
+        totalMessages: statsData.totalMessages || 0,
+        pendingMessages: statsData.pendingMessages || 0,
+        totalPetCare: statsData.totalPetCare || 0,
+        totalReviews: statsData.totalReviews || 0,
+        averageRating: statsData.averageRating || 0,
       };
     },
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -68,18 +43,7 @@ const DashboardOverview = () => {
   const { data: recentBookings } = useQuery({
     queryKey: ['recent-bookings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          guests (*),
-          rooms (*)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      return data;
+      return await bookingsApi.getAll();
     },
   });
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { bookingsApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,30 +41,14 @@ const BookingsManagement = () => {
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['admin-bookings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          guests (*),
-          rooms (*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return await bookingsApi.getAll();
     },
   });
 
   // Update booking status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from('bookings')
-        // @ts-ignore - Supabase type issue with updates
-        .update({ status })
-        .eq('id', id);
-
-      if (error) throw error;
+      await bookingsApi.updateStatus(id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-bookings'] });
@@ -85,12 +69,7 @@ const BookingsManagement = () => {
   // Delete booking
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await bookingsApi.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-bookings'] });

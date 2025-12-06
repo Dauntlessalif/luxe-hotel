@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { contactMessagesApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,26 +40,14 @@ const ContactMessagesManagement = () => {
   const { data: messages, isLoading } = useQuery({
     queryKey: ['admin-messages'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contact_messages')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return await contactMessagesApi.getAll();
     },
   });
 
   // Update message status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from('contact_messages')
-        // @ts-ignore - Supabase type issue with updates
-        .update({ status })
-        .eq('id', id);
-
-      if (error) throw error;
+      await contactMessagesApi.updateStatus(id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-messages'] });
@@ -80,12 +68,7 @@ const ContactMessagesManagement = () => {
   // Delete message
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('contact_messages')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await contactMessagesApi.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-messages'] });

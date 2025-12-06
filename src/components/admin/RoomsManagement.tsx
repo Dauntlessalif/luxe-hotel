@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { roomsApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,13 +48,7 @@ const RoomsManagement = () => {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['admin-rooms'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rooms')
-        .select('*')
-        .order('price', { ascending: true });
-
-      if (error) throw error;
-      return data;
+      return await roomsApi.getAllRooms();
     },
   });
 
@@ -74,18 +68,9 @@ const RoomsManagement = () => {
       };
 
       if (editingRoom) {
-        const { error } = await supabase
-          .from('rooms')
-          // @ts-ignore - Supabase type issue with updates
-          .update(roomData)
-          .eq('id', editingRoom.id);
-        if (error) throw error;
+        await roomsApi.updateRoom(editingRoom.id, roomData);
       } else {
-        const { error } = await supabase
-          .from('rooms')
-          // @ts-ignore - Supabase type issue with inserts
-          .insert([roomData]);
-        if (error) throw error;
+        await roomsApi.createRoom(roomData);
       }
     },
     onSuccess: () => {
@@ -109,12 +94,7 @@ const RoomsManagement = () => {
   // Delete room
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from('rooms')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      await roomsApi.deleteRoom(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });

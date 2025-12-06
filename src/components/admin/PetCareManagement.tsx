@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { petCareApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,26 +41,14 @@ const PetCareManagement = () => {
   const { data: requests, isLoading } = useQuery({
     queryKey: ['admin-petcare'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pet_care_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return await petCareApi.getAll();
     },
   });
 
   // Update request status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase
-        .from('pet_care_requests')
-        // @ts-ignore - Supabase type issue with updates
-        .update({ status })
-        .eq('id', id);
-
-      if (error) throw error;
+      await petCareApi.updateStatus(id, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-petcare'] });

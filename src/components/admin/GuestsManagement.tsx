@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { guestsApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,13 +31,7 @@ const GuestsManagement = () => {
   const { data: guests, isLoading } = useQuery({
     queryKey: ['admin-guests'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('guests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
+      return await guestsApi.getAll();
     },
   });
 

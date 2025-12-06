@@ -21,10 +21,56 @@ export const roomsApi = {
     return response.json();
   },
 
+  // Alias for getAllRooms
+  async getAll() {
+    return this.getAllRooms();
+  },
+
   // Get room by ID
   async getRoomById(id: number) {
     const response = await fetch(`/api/rooms/${id}`);
     if (!response.ok) throw new Error('Failed to fetch room');
+    return response.json();
+  },
+
+  // Create a new room
+  async createRoom(roomData: Omit<Room, 'id' | 'created_at' | 'updated_at'>) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch('/api/rooms', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(roomData)
+    });
+    if (!response.ok) throw new Error('Failed to create room');
+    return response.json();
+  },
+
+  // Update room
+  async updateRoom(id: number, roomData: Partial<Omit<Room, 'id' | 'created_at' | 'updated_at'>>) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/rooms/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(roomData)
+    });
+    if (!response.ok) throw new Error('Failed to update room');
+    return response.json();
+  },
+
+  // Delete room
+  async deleteRoom(id: number) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/rooms/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete room');
     return response.json();
   },
 
@@ -173,7 +219,7 @@ export const bookingsApi = {
   // Update booking status
   async updateBookingStatus(bookingId: string, status: Booking['status']) {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`/api/bookings/${bookingId}/status`, {
+    const response = await fetch(`/api/bookings/${bookingId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -185,9 +231,30 @@ export const bookingsApi = {
     return response.json();
   },
 
+  // Alias for updateBookingStatus
+  async updateStatus(bookingId: string, status: string) {
+    return this.updateBookingStatus(bookingId, status as Booking['status']);
+  },
+
   // Cancel booking
   async cancelBooking(bookingId: string) {
     return this.updateBookingStatus(bookingId, 'cancelled');
+  },
+
+  // Delete booking
+  async deleteBooking(bookingId: string) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete booking');
+    return response.json();
+  },
+
+  // Alias for deleteBooking
+  async delete(bookingId: string) {
+    return this.deleteBooking(bookingId);
   },
 
   // Get upcoming bookings
@@ -283,6 +350,11 @@ export const petCareApi = {
     return this.getAllRequests();
   },
 
+  // Create alias
+  async create(requestData: PetCareRequestInsert) {
+    return this.createRequest(requestData);
+  },
+
   // Get pet care requests by email
   async getRequestsByEmail(email: string) {
     const token = localStorage.getItem('auth_token');
@@ -299,7 +371,7 @@ export const petCareApi = {
     status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled'
   ) {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`/api/pet-care/${requestId}/status`, {
+    const response = await fetch(`/api/pet-care/${requestId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -308,6 +380,181 @@ export const petCareApi = {
       body: JSON.stringify({ status })
     });
     if (!response.ok) throw new Error('Failed to update status');
+    return response.json();
+  },
+
+  // Alias for updateRequestStatus
+  async updateStatus(requestId: string, status: string) {
+    return this.updateRequestStatus(requestId, status as any);
+  }
+};
+
+// ============================================
+// REVIEWS API
+// ============================================
+
+export const reviewsApi = {
+  // Get all reviews
+  async getAll() {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch('/api/reviews', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch reviews');
+    return response.json();
+  },
+
+  // Create a new review
+  async create(reviewData: any) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(reviewData)
+    });
+    if (!response.ok) throw new Error('Failed to create review');
+    return response.json();
+  },
+
+  // Get review by ID
+  async getById(id: string) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/reviews/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch review');
+    return response.json();
+  },
+
+  // Update review
+  async update(id: string, reviewData: any) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/reviews/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(reviewData)
+    });
+    if (!response.ok) throw new Error('Failed to update review');
+    return response.json();
+  },
+
+  // Update review status
+  async updateStatus(id: string, status: string, response?: string) {
+    const token = localStorage.getItem('auth_token');
+    const fetchResponse = await fetch(`/api/reviews/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ status, response })
+    });
+    if (!fetchResponse.ok) throw new Error('Failed to update review status');
+    return fetchResponse.json();
+  },
+
+  // Delete review
+  async delete(id: string) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/reviews/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete review');
+    return response.json();
+  }
+};
+
+// ============================================
+// CONTACT MESSAGES API (Extended)
+// ============================================
+
+export const contactMessagesApi = {
+  // Create a contact message
+  async createMessage(messageData: ContactMessageInsert) {
+    const response = await fetch('/api/contact-messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(messageData)
+    });
+    if (!response.ok) throw new Error('Failed to create message');
+    return response.json();
+  },
+
+  // Get all messages
+  async getAllMessages() {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch('/api/contact-messages', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch messages');
+    return response.json();
+  },
+
+  // Alias for getAllMessages
+  async getAll() {
+    return this.getAllMessages();
+  },
+
+  // Get message by ID
+  async getById(id: string) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/contact-messages/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch message');
+    return response.json();
+  },
+
+  // Update message status
+  async updateMessageStatus(id: string, status: 'new' | 'read' | 'replied' | 'archived') {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/contact-messages/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ status })
+    });
+    if (!response.ok) throw new Error('Failed to update status');
+    return response.json();
+  },
+
+  // Alias for updateMessageStatus
+  async updateStatus(id: string, status: string) {
+    return this.updateMessageStatus(id, status as any);
+  },
+
+  // Delete message
+  async deleteMessage(id: string) {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/contact-messages/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to delete message');
+    return response.json();
+  },
+
+  // Alias for deleteMessage
+  async delete(id: string) {
+    return this.deleteMessage(id);
+  },
+
+  // Get messages by status
+  async getMessagesByStatus(status: 'new' | 'read' | 'replied' | 'archived') {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`/api/contact-messages/status/${status}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch messages');
     return response.json();
   }
 };

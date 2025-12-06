@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { reviewsApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,29 +30,13 @@ const MyReviews = ({ customerEmail }: MyReviewsProps) => {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['customer-reviews', customerEmail],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*, rooms(name), guests(first_name, last_name)')
-        .eq('guest_email', customerEmail)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
+      return await reviewsApi.getAll();
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, comment }: { id: string; comment: string }) => {
-      const { data, error } = await supabase
-        .from('reviews')
-        // @ts-ignore - Supabase type inference issue
-        .update({ comment })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      await reviewsApi.update(id, { comment });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-reviews'] });
@@ -67,12 +51,7 @@ const MyReviews = ({ customerEmail }: MyReviewsProps) => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('reviews')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await reviewsApi.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer-reviews'] });
