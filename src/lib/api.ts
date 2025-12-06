@@ -279,43 +279,6 @@ export const bookingsApi = {
 };
 
 // ============================================
-// CONTACT MESSAGES API
-// ============================================
-
-export const contactMessagesApi = {
-  // Create a contact message
-  async createMessage(messageData: ContactMessageInsert) {
-    const response = await fetch('/api/contact-messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(messageData)
-    });
-    if (!response.ok) throw new Error('Failed to create message');
-    return response.json();
-  },
-
-  // Get all messages
-  async getAllMessages() {
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch('/api/contact-messages', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Failed to fetch messages');
-    return response.json();
-  },
-
-  // Get messages by status
-  async getMessagesByStatus(status: 'new' | 'read' | 'replied' | 'archived') {
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(`/api/contact-messages/status/${status}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Failed to fetch messages');
-    return response.json();
-  }
-};
-
-// ============================================
 // PET CARE REQUESTS API
 // ============================================
 
