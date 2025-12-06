@@ -358,6 +358,11 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return result || null;
 }
 
+export async function getBookingDetailsById(id: string): Promise<BookingDetails | null> {
+  const result = await db.prepare('SELECT * FROM booking_details WHERE id = ?1').bind(id).first<BookingDetails>();
+  return result || null;
+}
+
 export async function getBookingsByGuestId(guestId: string): Promise<BookingDetails[]> {
   const result = await db
     .prepare('SELECT * FROM booking_details WHERE guest_id = ?1 ORDER BY check_in_date DESC')
@@ -633,16 +638,41 @@ export async function deleteReview(id: string): Promise<boolean> {
 
 export async function getDashboardStats() {
   const totalRooms = await db.prepare('SELECT COUNT(*) as count FROM rooms').first<{ count: number }>();
+  const availableRooms = await db.prepare('SELECT COUNT(*) as count FROM rooms WHERE available = 1').first<{ count: number }>();
   const totalGuests = await db.prepare('SELECT COUNT(*) as count FROM guests').first<{ count: number }>();
   const totalBookings = await db.prepare('SELECT COUNT(*) as count FROM bookings').first<{ count: number }>();
+  
+  // Active bookings: confirmed or checked_in status
+  const activeBookings = await db.prepare(
+    "SELECT COUNT(*) as count FROM bookings WHERE status IN ('confirmed', 'checked_in', 'pending')"
+  ).first<{ count: number }>();
+  
   const totalRevenue = await db.prepare('SELECT SUM(total_price) as total FROM bookings WHERE status != ?1').bind('cancelled').first<{ total: number }>();
+  
+  // Messages stats
+  const totalMessages = await db.prepare('SELECT COUNT(*) as count FROM contact_messages').first<{ count: number }>();
+  const pendingMessages = await db.prepare("SELECT COUNT(*) as count FROM contact_messages WHERE status = 'new'").first<{ count: number }>();
+  
+  // Pet care stats
+  const totalPetCare = await db.prepare('SELECT COUNT(*) as count FROM pet_care_requests').first<{ count: number }>();
+  
+  // Reviews stats
+  const totalReviews = await db.prepare('SELECT COUNT(*) as count FROM reviews').first<{ count: number }>();
   const pendingReviews = await db.prepare('SELECT COUNT(*) as count FROM reviews WHERE status = ?1').bind('pending').first<{ count: number }>();
+  const averageRating = await db.prepare('SELECT AVG(rating) as avg FROM reviews WHERE status = ?1').bind('approved').first<{ avg: number }>();
 
   return {
     totalRooms: totalRooms?.count || 0,
+    availableRooms: availableRooms?.count || 0,
     totalGuests: totalGuests?.count || 0,
     totalBookings: totalBookings?.count || 0,
+    activeBookings: activeBookings?.count || 0,
     totalRevenue: totalRevenue?.total || 0,
+    totalMessages: totalMessages?.count || 0,
+    pendingMessages: pendingMessages?.count || 0,
+    totalPetCare: totalPetCare?.count || 0,
+    totalReviews: totalReviews?.count || 0,
     pendingReviews: pendingReviews?.count || 0,
+    averageRating: averageRating?.avg || 0,
   };
 }
