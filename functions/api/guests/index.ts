@@ -18,7 +18,7 @@ export const onRequest = async (context: any): Promise<Response> => {
 
     if (context.request.method === 'POST') {
       const guestData = await context.request.json();
-      const newGuest = await d1.createGuest(guestData);
+      const newGuest = await d1.createGuest(guestData, guestData.id);
       return new Response(JSON.stringify(newGuest), { 
         status: 201,
         headers: { 'Content-Type': 'application/json' }

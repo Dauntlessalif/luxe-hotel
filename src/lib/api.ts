@@ -138,7 +138,22 @@ export const guestsApi = {
   // Create or get guest by email
   async createOrGetGuest(guestData: GuestInsert) {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch('/api/guests/upsert', {
+    
+    // First, try to get existing guest by email
+    try {
+      const getResponse = await fetch(`/api/guests/email/${encodeURIComponent(guestData.email)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (getResponse.ok) {
+        return getResponse.json();
+      }
+    } catch (error) {
+      console.log('Guest not found, creating new one');
+    }
+    
+    // If guest doesn't exist, create a new one
+    const createResponse = await fetch('/api/guests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,8 +161,9 @@ export const guestsApi = {
       },
       body: JSON.stringify(guestData)
     });
-    if (!response.ok) throw new Error('Failed to upsert guest');
-    return response.json();
+    
+    if (!createResponse.ok) throw new Error('Failed to create guest');
+    return createResponse.json();
   },
 
   // Get guest by email
