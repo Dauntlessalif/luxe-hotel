@@ -17,12 +17,22 @@ export const onRequest = async (context: any): Promise<Response> => {
     }
 
     if (context.request.method === 'POST') {
-      const bookingData = await context.request.json();
-      const newBooking = await d1.createBooking(bookingData);
-      return new Response(JSON.stringify(newBooking), { 
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      try {
+        const bookingData = await context.request.json();
+        
+        if (!bookingData.room_id || !bookingData.guest_id) {
+          return new Response(JSON.stringify({ error: 'Missing required fields: room_id and guest_id' }), { status: 400 });
+        }
+
+        const newBooking = await d1.createBooking(bookingData);
+        return new Response(JSON.stringify(newBooking), { 
+          status: 201,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error('POST booking error:', err);
+        throw err;
+      }
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });

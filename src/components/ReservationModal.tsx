@@ -163,9 +163,10 @@ const ReservationModal = ({ isOpen, onClose, room }: ReservationModalProps) => {
       onClose();
     } catch (error) {
       console.error('Booking error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Booking Failed",
-        description: "There was an error processing your reservation. Please try again.",
+        description: `There was an error processing your reservation: ${errorMessage}. Please try again.`,
         variant: "destructive",
       });
     } finally {

@@ -276,8 +276,8 @@ export async function getGuestByEmail(email: string): Promise<Guest | null> {
   return result || null;
 }
 
-export async function createGuest(guest: Omit<Guest, 'id' | 'created_at' | 'updated_at'>): Promise<Guest> {
-  const id = uuidv4();
+export async function createGuest(guest: Omit<Guest, 'id' | 'created_at' | 'updated_at'>, guestId?: string): Promise<Guest> {
+  const id = guestId || uuidv4();
   const now = new Date().toISOString();
 
   await db
@@ -318,14 +318,14 @@ export async function updateGuest(id: string, guest: Partial<Omit<Guest, 'id' | 
   return getGuestById(id);
 }
 
-export async function upsertGuest(email: string, guestData: Omit<Guest, 'id' | 'created_at' | 'updated_at'>): Promise<Guest> {
+export async function upsertGuest(email: string, guestData: Omit<Guest, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Guest> {
   const existingGuest = await getGuestByEmail(email);
 
   if (existingGuest) {
     return updateGuest(existingGuest.id, guestData) as Promise<Guest>;
   }
 
-  return createGuest(guestData);
+  return createGuest(guestData, guestData.id);
 }
 
 // ============================================
