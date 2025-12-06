@@ -4,7 +4,7 @@
  */
 
 import { sign, verify } from 'jsonwebtoken';
-import * as d1 from '../../../src/lib/d1';
+import * as d1 from '../d1';
 
 const JWT_SECRET = 'your-super-secret-jwt-key-change-in-production';
 const TOKEN_EXPIRES_IN = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
