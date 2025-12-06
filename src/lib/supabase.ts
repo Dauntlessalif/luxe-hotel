@@ -1,37 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
+/**
+ * DEPRECATED: This file is kept for backwards compatibility only
+ * All database operations have been migrated to Cloudflare D1
+ * See src/lib/d1.ts for the new database abstraction layer
+ * 
+ * The Supabase client should no longer be used
+ */
 
-// Get Supabase credentials from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Validate that environment variables are set
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. Please check your .env file.\n' +
-    'Required: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
-  );
-}
-
-// Log configuration (without exposing the key)
-console.log('Supabase Configuration:', {
-  url: supabaseUrl,
-  keyPrefix: supabaseAnonKey.substring(0, 20) + '...',
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-});
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+// This export is kept to prevent runtime errors in existing imports
+// but should be removed once all components are updated
+export const supabase = {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'swift-room-haven-auth',
-    flowType: 'pkce',
+    getSession: async () => ({ data: { session: null } }),
+    onAuthStateChange: (callback: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signUp: async () => { throw new Error('Use AuthContext.signUp instead'); },
+    signInWithPassword: async () => { throw new Error('Use AuthContext.signIn instead'); },
+    signOut: async () => { throw new Error('Use AuthContext.signOut instead'); },
+    resetPasswordForEmail: async () => { throw new Error('Use AuthContext.resetPassword instead'); },
+    updateUser: async () => { throw new Error('Use AuthContext.updateProfile instead'); },
   },
-  global: {
-    headers: {
-      'x-application-name': 'swift-room-haven',
-    },
+  from: (table: string) => {
+    throw new Error(`Database operations have been migrated to D1. Use the appropriate API from src/lib/api.ts instead.`);
   },
-});
+  rpc: (name: string) => {
+    throw new Error(`RPC operations have been migrated to D1. Use the appropriate API from src/lib/api.ts instead.`);
+  },
+} as any;
+

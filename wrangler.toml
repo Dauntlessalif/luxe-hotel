@@ -1,3 +1,36 @@
 pages_build_output_dir = "dist"
 name = "luxe-hotel"
 compatibility_date = "2024-12-06"
+
+# D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "luxe-hotel"
+database_id = "8322ba8b-4563-449a-8929-5b090ee6215f"
+
+# Bindings for environment variables
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "luxe-hotel"
+database_id = "8322ba8b-4563-449a-8929-5b090ee6215f"
+
+[env.preview]
+vars = { ENVIRONMENT = "preview" }
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "luxe-hotel"
+database_id = "8322ba8b-4563-449a-8929-5b090ee6215f"
+
+# Build configuration
+[build]
+command = "npm run build"
+cwd = "./"
+watch_paths = ["src/**/*.ts", "src/**/*.tsx", "functions/**/*.ts"]
+
+# External modules that shouldn't be bundled in frontend
+[build.upload]
+main = "functions/index.ts"

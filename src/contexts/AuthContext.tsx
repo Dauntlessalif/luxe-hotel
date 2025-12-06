@@ -1,12 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
+interface AuthUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  is_admin: boolean;
+}
+
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: { token: string; expiresAt: string } | null;
   loading: boolean;
   isAdmin: boolean;
   signUp: (email: string, password: string, userData: any) => Promise<void>;
@@ -28,125 +34,108 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<{ token: string; expiresAt: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      checkAdminStatus(session?.user ?? null);
-      setLoading(false);
-    });
+    // Check if token exists in localStorage
+    const storedToken = localStorage.getItem('auth_token');
+    const storedUser = localStorage.getItem('auth_user');
+    const expiresAt = localStorage.getItem('auth_expires_at');
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      await checkAdminStatus(session?.user ?? null);
+    if (storedToken && storedUser && expiresAt) {
+      try {
+        // Check if token is still valid
+        const now = new Date().getTime();
+        if (now < parseInt(expiresAt)) {
+          const parsedUser: AuthUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setSession({ token: storedToken, expiresAt });
+          setIsAdmin(parsedUser.is_admin);
+          setLoading(false);
+        } else {
+          // Token expired, clear storage
+          clearAuth();
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+        clearAuth();
+        setLoading(false);
+      }
+    } else {
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
-  const checkAdminStatus = async (user: User | null) => {
-    if (!user) {
-      setIsAdmin(false);
-      return;
-    }
-
-    try {
-      // Check if user has admin role in user_metadata or app_metadata
-      const adminStatus = user.user_metadata?.is_admin || 
-                         user.app_metadata?.is_admin || 
-                         user.email?.endsWith('@swiftroomhaven.com') ||
-                         false;
-      
-      setIsAdmin(adminStatus);
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      setIsAdmin(false);
-    }
+  const clearAuth = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_expires_at');
+    setUser(null);
+    setSession(null);
+    setIsAdmin(false);
   };
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
       console.log('Starting sign up process for:', email);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            phone: userData.phone,
-            is_admin: false,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          phone: userData.phone,
+          address: userData.address || '',
+          city: userData.city || '',
+          country: userData.country || '',
+        }),
       });
 
-      console.log('Sign up response:', { data, error });
+      const data = await response.json();
 
-      if (error) {
-        console.error('Sign up error details:', error);
-        throw error;
+      if (!response.ok) {
+        throw new Error(data.error || 'Sign up failed');
       }
 
-      // Create guest profile
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('guests')
-          // @ts-ignore - Supabase type issue
-          .insert({
-            id: data.user.id,
-            email: email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            phone: userData.phone,
-            address: userData.address || '',
-            city: userData.city || '',
-            country: userData.country || '',
-          });
+      // Store token and user
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_expires_at', data.expiresAt.toString());
 
-        if (profileError) {
-          console.error('Error creating guest profile:', profileError);
-        }
-      }
+      setUser(data.user);
+      setSession({ token: data.token, expiresAt: data.expiresAt });
+      setIsAdmin(data.user.is_admin);
 
       toast({
-        title: "Account Created!",
-        description: "Please check your email to verify your account.",
+        title: 'Account Created!',
+        description: 'Welcome to Luxe Hotel. Your account has been created successfully.',
       });
     } catch (error: any) {
       console.error('Sign up error:', error);
-      
-      // Provide more specific error messages
-      let errorMessage = "An error occurred during sign up.";
-      
-      if (error.message?.includes('Failed to fetch')) {
-        errorMessage = "Cannot connect to authentication server. Please check:\n1. Your internet connection\n2. Supabase URL in .env file\n3. Supabase project is active";
-      } else if (error.message?.includes('User already registered')) {
-        errorMessage = "This email is already registered. Try signing in instead.";
+
+      let errorMessage = 'An error occurred during sign up.';
+
+      if (error.message?.includes('already registered')) {
+        errorMessage = 'This email is already registered. Try signing in instead.';
       } else if (error.message?.includes('Invalid email')) {
-        errorMessage = "Please enter a valid email address.";
+        errorMessage = 'Please enter a valid email address.';
       } else if (error.message?.includes('Password')) {
-        errorMessage = "Password must be at least 6 characters long.";
+        errorMessage = 'Password must be at least 8 characters long.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
-        title: "Sign Up Failed",
+        title: 'Sign Up Failed',
         description: errorMessage,
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw error;
     }
@@ -154,22 +143,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Sign in failed');
+      }
+
+      // Store token and user
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_expires_at', data.expiresAt.toString());
+
+      setUser(data.user);
+      setSession({ token: data.token, expiresAt: data.expiresAt });
+      setIsAdmin(data.user.is_admin);
 
       toast({
-        title: "Welcome Back!",
+        title: 'Welcome Back!',
         description: "You've successfully signed in.",
       });
     } catch (error: any) {
       toast({
-        title: "Sign In Failed",
-        description: error.message,
-        variant: "destructive",
+        title: 'Sign In Failed',
+        description: error.message || 'Invalid email or password.',
+        variant: 'destructive',
       });
       throw error;
     }
@@ -177,32 +180,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInAsAdmin = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/admin-signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // Verify admin status
-      const isAdminUser = data.user?.user_metadata?.is_admin || 
-                         data.user?.app_metadata?.is_admin ||
-                         data.user?.email?.endsWith('@swiftroomhaven.com');
+      if (!response.ok) {
+        throw new Error(data.error || 'Admin sign in failed');
+      }
 
-      if (!isAdminUser) {
-        await supabase.auth.signOut();
+      if (!data.user.is_admin) {
         throw new Error('Unauthorized: Admin access required');
       }
 
+      // Store token and user
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem('auth_expires_at', data.expiresAt.toString());
+
+      setUser(data.user);
+      setSession({ token: data.token, expiresAt: data.expiresAt });
+      setIsAdmin(true);
+
       toast({
-        title: "Admin Access Granted",
-        description: "Welcome to the admin panel.",
+        title: 'Admin Access Granted',
+        description: 'Welcome to the admin panel.',
       });
     } catch (error: any) {
       toast({
-        title: "Admin Login Failed",
-        description: error.message,
-        variant: "destructive",
+        title: 'Admin Login Failed',
+        description: error.message || 'Admin authentication failed.',
+        variant: 'destructive',
       });
       throw error;
     }
@@ -210,18 +221,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Call logout endpoint to invalidate token
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        await fetch('/api/auth/signout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }).catch(() => {
+          // Ignore errors on logout
+        });
+      }
+
+      clearAuth();
 
       toast({
-        title: "Signed Out",
+        title: 'Signed Out',
         description: "You've been logged out successfully.",
       });
     } catch (error: any) {
       toast({
-        title: "Sign Out Failed",
+        title: 'Sign Out Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw error;
     }
@@ -229,21 +253,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Password reset failed');
+      }
 
       toast({
-        title: "Password Reset Email Sent",
-        description: "Check your email for the password reset link.",
+        title: 'Password Reset Email Sent',
+        description: 'Check your email for the password reset link.',
       });
     } catch (error: any) {
       toast({
-        title: "Password Reset Failed",
+        title: 'Password Reset Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw error;
     }
@@ -253,32 +283,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!user) throw new Error('No user logged in');
 
-      const { error } = await supabase.auth.updateUser({
-        data: data,
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      // Update guest profile if exists
-      const { error: profileError } = await supabase
-        .from('guests')
-        // @ts-ignore - Supabase type issue
-        .update(data)
-        .eq('id', user.id);
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError);
+      if (!response.ok) {
+        throw new Error(result.error || 'Profile update failed');
       }
 
+      // Update user in state
+      const updatedUser = { ...user, ...result.user };
+      setUser(updatedUser);
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
+        title: 'Profile Updated',
+        description: 'Your profile has been updated successfully.',
       });
     } catch (error: any) {
       toast({
-        title: "Update Failed",
+        title: 'Update Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw error;
     }
