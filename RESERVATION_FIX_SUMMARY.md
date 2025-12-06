@@ -1,7 +1,38 @@
-# Reservation Creation Issue - Fixed
+# Reservation Creation Issue - Fixed (Update)
+
+## Problem
+Users were failing to create reservations. The error was caused by a Primary Key constraint violation in the `guests` table when `upsertGuest` was called.
+
+## Root Cause Analysis
+1.  **`upsertGuest` Logic**: The function was only checking for existing guests by `email`. If a logged-in user (with a known `id`) tried to book with a new email (or if the email lookup failed for some reason), the system attempted to create a *new* guest record using the user's existing `id`.
+2.  **Primary Key Violation**: Since the `id` already existed in the `guests` table (associated with the old email), the `INSERT` operation failed with a Primary Key constraint violation.
+3.  **`updateGuest` Logic**: The `updateGuest` function was blindly including the `id` field in the `UPDATE` statement if it was present in the input object. This could also lead to errors if the system tried to "update" the ID to the same value or a different value.
+
+## Fix Implementation
+Modified `functions/api/d1.ts`:
+
+1.  **Updated `updateGuest`**:
+    *   Added logic to explicitly filter out the `id` field from the data being updated. This ensures we never attempt to modify the Primary Key of a record.
+
+2.  **Updated `upsertGuest`**:
+    *   Changed the lookup priority. Now, it first checks if a guest exists with the provided `id`.
+    *   If found by `id`, it updates that guest record (allowing users to update their email/details).
+    *   If not found by `id`, it falls back to looking up by `email`.
+    *   If found by `email`, it updates that guest record.
+    *   If neither is found, it creates a new guest record.
+
+## Benefits
+*   **Reliability**: Prevents reservation failures for logged-in users updating their details.
+*   **Data Integrity**: Ensures guest records are correctly updated rather than duplicated or conflicting.
+*   **Robustness**: Handles cases where `id` is provided but email has changed.
+
+---
+
+# Previous Fixes (Context)
 
 ## Problem
 Users were unable to create reservations. The error was caused by missing API endpoints for guest management.
+
 
 ## Root Cause
 The reservation workflow requires three steps:

@@ -296,7 +296,11 @@ export async function updateGuest(id: string, guest: Partial<Omit<Guest, 'id' | 
   const values: any[] = [];
   let paramCount = 1;
 
-  for (const [key, value] of Object.entries(guest)) {
+  // Filter out 'id' from guest object if present to prevent PK updates
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, ...guestData } = guest as any;
+
+  for (const [key, value] of Object.entries(guestData)) {
     if (value !== undefined) {
       updates.push(`${key} = ?${paramCount}`);
       values.push(value);
@@ -319,12 +323,22 @@ export async function updateGuest(id: string, guest: Partial<Omit<Guest, 'id' | 
 }
 
 export async function upsertGuest(email: string, guestData: Omit<Guest, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Guest> {
+  // 1. Try to find by ID if provided
+  if (guestData.id) {
+    const existingGuestById = await getGuestById(guestData.id);
+    if (existingGuestById) {
+      return updateGuest(existingGuestById.id, guestData) as Promise<Guest>;
+    }
+  }
+
+  // 2. Try to find by Email
   const existingGuest = await getGuestByEmail(email);
 
   if (existingGuest) {
     return updateGuest(existingGuest.id, guestData) as Promise<Guest>;
   }
 
+  // 3. Create new
   return createGuest(guestData, guestData.id);
 }
 
