@@ -359,7 +359,7 @@ export async function getBookingById(id: string): Promise<Booking | null> {
 }
 
 export async function getBookingDetailsById(id: string): Promise<BookingDetails | null> {
-  const result = await db.prepare('SELECT * FROM booking_details WHERE id = ?1').bind(id).first<BookingDetails>();
+  const result = await db.prepare('SELECT * FROM booking_details WHERE booking_id = ?1').bind(id).first<BookingDetails>();
   return result || null;
 }
 

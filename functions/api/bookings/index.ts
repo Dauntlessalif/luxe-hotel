@@ -3,10 +3,11 @@
  */
 import * as d1 from '../d1';
 
-// Transform flat booking_details into nested format for frontend
+// Transform flat booking_details view into nested format for frontend
+// View columns: booking_id, booking_status, booked_at (not id, status, created_at)
 function transformBooking(booking: any) {
   return {
-    id: booking.id,
+    id: booking.booking_id || booking.id,
     room_id: booking.room_id,
     guest_id: booking.guest_id,
     check_in_date: booking.check_in_date,
@@ -14,9 +15,9 @@ function transformBooking(booking: any) {
     number_of_guests: booking.number_of_guests,
     total_nights: booking.total_nights,
     total_price: booking.total_price,
-    status: booking.status,
+    status: booking.booking_status || booking.status,
     special_requests: booking.special_requests,
-    created_at: booking.created_at,
+    created_at: booking.booked_at || booking.created_at,
     updated_at: booking.updated_at,
     guests: {
       id: booking.guest_id,

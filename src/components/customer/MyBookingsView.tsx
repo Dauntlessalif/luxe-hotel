@@ -79,8 +79,8 @@ const MyBookingsView = ({ customerEmail }: MyBookingsViewProps) => {
 
   // Separate bookings into upcoming and past
   const today = new Date().toISOString().split('T')[0];
-  const upcomingBookings = bookings.filter((b: any) => b.check_out >= today && b.status !== 'cancelled');
-  const pastBookings = bookings.filter((b: any) => b.check_out < today || b.status === 'cancelled');
+  const upcomingBookings = bookings.filter((b: any) => b.check_out_date >= today && b.status !== 'cancelled');
+  const pastBookings = bookings.filter((b: any) => b.check_out_date < today || b.status === 'cancelled');
 
   return (
     <div className="space-y-6">
@@ -114,14 +114,14 @@ const MyBookingsView = ({ customerEmail }: MyBookingsViewProps) => {
                         <Calendar className="h-4 w-4 text-gray-500" />
                         <div>
                           <p className="font-medium">Check-in</p>
-                          <p className="text-gray-600">{new Date(booking.check_in).toLocaleDateString()}</p>
+                          <p className="text-gray-600">{new Date(booking.check_in_date).toLocaleDateString()}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-gray-500" />
                         <div>
                           <p className="font-medium">Check-out</p>
-                          <p className="text-gray-600">{new Date(booking.check_out).toLocaleDateString()}</p>
+                          <p className="text-gray-600">{new Date(booking.check_out_date).toLocaleDateString()}</p>
                         </div>
                       </div>
                     </div>
@@ -131,7 +131,7 @@ const MyBookingsView = ({ customerEmail }: MyBookingsViewProps) => {
                         <div>
                           <p className="font-medium">Total Amount</p>
                           <p className="text-lg font-bold text-green-600">
-                            {formatCurrency(booking.total_amount)}
+                            {formatCurrency(booking.total_price)}
                           </p>
                         </div>
                       </div>
@@ -182,7 +182,7 @@ const MyBookingsView = ({ customerEmail }: MyBookingsViewProps) => {
                         {booking.rooms?.name || 'Room'}
                       </CardTitle>
                       <CardDescription>
-                        {new Date(booking.check_in).toLocaleDateString()} - {new Date(booking.check_out).toLocaleDateString()}
+                        {new Date(booking.check_in_date).toLocaleDateString()} - {new Date(booking.check_out_date).toLocaleDateString()}
                       </CardDescription>
                     </div>
                     <Badge className={getStatusColor(booking.status)}>
@@ -193,7 +193,7 @@ const MyBookingsView = ({ customerEmail }: MyBookingsViewProps) => {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-600">
-                      Total: {formatCurrency(booking.total_amount)}
+                      Total: {formatCurrency(booking.total_price)}
                     </p>
                     <Button variant="outline" size="sm">
                       View Details
