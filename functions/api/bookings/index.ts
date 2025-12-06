@@ -5,7 +5,9 @@ import * as d1 from '../d1';
 
 // Transform flat booking_details view into nested format for frontend
 // View columns: booking_id, booking_status, booked_at (not id, status, created_at)
+// Note: view doesn't include updated_at, so we use booked_at for both timestamps
 function transformBooking(booking: any) {
+  const createdAt = booking.booked_at || booking.created_at;
   return {
     id: booking.booking_id || booking.id,
     room_id: booking.room_id,
@@ -17,8 +19,8 @@ function transformBooking(booking: any) {
     total_price: booking.total_price,
     status: booking.booking_status || booking.status,
     special_requests: booking.special_requests,
-    created_at: booking.booked_at || booking.created_at,
-    updated_at: booking.updated_at,
+    created_at: createdAt,
+    updated_at: booking.updated_at || createdAt,
     guests: {
       id: booking.guest_id,
       first_name: booking.first_name,
