@@ -1,16 +1,14 @@
+pages_build_output_dir = "dist"
 name = "luxe-hotel"
-type = "javascript"
-main = "src/index.ts"
 compatibility_date = "2024-12-06"
 
+[build]
+command = "npm run build"
+cwd = ""
+watch_paths = ["src/**/*.tsx", "src/**/*.ts", "src/**/*.css"]
+
 [env.production]
-vars = { ENVIRONMENT = "production" }
+name = "luxe-hotel-production"
 
 [env.preview]
-vars = { ENVIRONMENT = "preview" }
-
-[env.development]
-vars = { ENVIRONMENT = "development" }
-
-# Pages configuration
-pages_build_output_dir = "dist"
+name = "luxe-hotel-preview"
